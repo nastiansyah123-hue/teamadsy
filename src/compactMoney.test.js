@@ -1,0 +1,3 @@
+import test from'node:test';import assert from'node:assert/strict';import{compactMoney}from'./compactMoney.js';
+test('Growing financial values stay compact with Indonesian units',()=>{assert.equal(compactMoney(937478299),'Rp937,48 jt');assert.equal(compactMoney(1250000000),'Rp1,25 M');assert.equal(compactMoney(3500000000000),'Rp3,5 T');assert.equal(compactMoney(1250),'Rp1,25 rb');assert.equal(compactMoney(0),'Rp0');});
+test('Rounding crosses unit boundaries and negative contributions retain their sign',()=>{assert.equal(compactMoney(999999),'Rp1 jt');assert.equal(compactMoney(999999999),'Rp1 M');assert.equal(compactMoney(-1250000000),'-Rp1,25 M');assert.equal(compactMoney(NaN),'—');assert.equal(compactMoney(Infinity),'—');});
