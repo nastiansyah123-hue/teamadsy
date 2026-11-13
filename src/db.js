@@ -1,10 +1,8 @@
 import{saveOwnerRow,removeOwnerRow}from'./ownerWrites.js';
+import{createOwnerLoader}from'./ownerLoader.js';
+export{ownerTables,sourceTables}from'./ownerLoader.js';
 import{createClient}from'@supabase/supabase-js';
 export const supabase=import.meta.env.VITE_SUPABASE_URL&&import.meta.env.VITE_SUPABASE_ANON_KEY?createClient(import.meta.env.VITE_SUPABASE_URL,import.meta.env.VITE_SUPABASE_ANON_KEY,{auth:{storageKey:'adsy-owner-auth'}}):null;
-export const ownerTables=['products','mappings','hpp','targets','notes'];
-export const sourceTables={acq:['catalog','reports','ads','assignments'],crm:['products','reports','regions','profiles','targets'],mp:['products','skus','mappings','orders','ads','daily','shops','imports','ad_parts','order_days','ad_rules','targets']};
-async function readTable(table,signal){const out=[];for(let offset=0;;){let q=supabase.from(table).select('*').order('id').range(offset,offset+199);if(signal)q=q.abortSignal(signal);const{data,error}=await q;if(error)throw error;if(!Array.isArray(data))throw Error('Format respons sumber tidak valid.');if(!data.length)return out;out.push(...data);offset+=data.length;}}
-async function source(division,signal){const pairs=await Promise.all(sourceTables[division].map(async table=>{const out=[];for(let offset=0;;){let q=supabase.rpc('owner_read_source',{p_division:division,p_table:table,p_offset:offset,p_limit:200});if(signal)q=q.abortSignal(signal);const{data,error}=await q;if(error)throw error;if(!Array.isArray(data))throw Error('Format respons sumber tidak valid.');if(!data.length)return [table,out];out.push(...data);offset+=data.length;}}));return Object.fromEntries(pairs);}
-export async function loadOwner(signal){const {data:profile,error}=await supabase.from('owner_profiles').select('user_id,name,active').maybeSingle().abortSignal(signal);if(error)throw error;if(!profile?.active){const e=Error('Akun ini belum ditetapkan sebagai Owner. Jalankan activate-owner.sql melalui SQL Editor.');e.code='OWNER_ACCESS_DENIED';throw e;}const own=await Promise.all(ownerTables.map(t=>readTable('owner_'+t,signal)));const results=await Promise.allSettled(Object.keys(sourceTables).map(d=>source(d,signal)));const sources={},issues={};Object.keys(sourceTables).forEach((d,i)=>{if(results[i].status==='fulfilled')sources[d]=results[i].value;else issues[d]=results[i].reason.message;});return {profile,owner:Object.fromEntries(ownerTables.map((t,i)=>[t,own[i]])),sources,issues,loadedAt:new Date().toISOString()};}
+export const loadOwner=(signal,onProgress)=>createOwnerLoader(supabase)(signal,onProgress);
 export const save=(table,row,exists)=>saveOwnerRow(supabase,table,row,exists);
 export const remove=(table,id)=>removeOwnerRow(supabase,table,id);
