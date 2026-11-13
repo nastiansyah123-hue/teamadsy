@@ -78,3 +78,11 @@ npm run build
 ```
 
 Tes model meliputi omzet sumber yang tetap, unit bonus/HPP, tanggal HPP, SKU belum terhubung, transaksi CRM tersendiri, periode pembanding dan CSV formula injection. Tes database meliputi akses satu Owner, penolakan akun biasa/anon, bootstrap terlindungi, allowlist sumber/injeksi SQL, HPP append-only, pencabutan Owner, dan permission sumber tidak berubah. Coexistence keempat schema Akuisisi + CRM + Marketplace + Owner juga telah diuji lokal terhadap schema aplikasi yang tersedia. Render server halaman dan form serta build produksi diperiksa. **Uji klik/tampilan browser belum dilakukan** karena tool browser/cua_repl tidak tersedia. Koneksi ke Supabase/Vercel milik pengguna belum dijalankan; perlu pemasangan SQL dan env di atas.
+
+## Pembaruan performa input Owner
+
+Simpan produk, mapping, HPP, target dan catatan sekarang hanya melakukan satu penulisan ke tabel Owner yang sesuai dan memakai baris hasil konfirmasi server. Tidak lagi mengunduh seluruh laporan Akuisisi/CRM/Marketplace setiap simpan. Penghapusan juga hanya menyentuh baris Owner yang dipilih. Cache sumber dipertahankan; penyegaran sumber tetap melalui tombol Perbarui data dan interval 5 menit. Refresh otomatis dilewati saat modal input terbuka dan permintaan refresh tidak ditumpuk. Hasil refresh yang dimulai sebelum penyimpanan tidak menimpa pengaturan yang baru tersimpan.
+
+Halaman Master SKU, HPP dan Monitoring tidak menjalankan analisis gabungan. Data sumber dan hasil normalisasi dipisah dari mapping/HPP; perubahan catatan, target dan nama produk tidak memicu normalisasi sumber. Lookup SKU, mapping, harga HPP bertanggal, biaya harian, pengelompokan dan monitoring memakai indeks/cache sehingga tidak memindai seluruh laporan berulang kali per baris.
+
+Benchmark lokal sintetis 30.000 baris pesanan, 20 toko, 11 bulan: normalisasi + HPP + pengelompokan dari sekitar 2.121 ms menjadi 215 ms pada lingkungan uji (sekitar 9,9×), dengan hasil keuangan identik. Ini bukan pengukuran koneksi/ponsel pengguna. Muat awal tetap memerlukan pengambilan laporan sumber; volume sangat besar mungkin memerlukan agregasi server bertahap. Pembaruan ini tidak mengubah aturan HPP/tanggal, tidak membutuhkan SQL/env baru, dan tidak mengubah ketiga aplikasi sumber.
